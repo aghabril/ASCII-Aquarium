@@ -84,7 +84,7 @@ Other CYD-style boards may look similar but use different display, touch, or SD
 hardware.
 
 ## 3D Printed 2.8" CYD Cases ><((((>`
-- Basic snapfit case by PowerPill.Prints
+- [Basic snapfit case by PowerPill.Prints](https://makerworld.com/en/models/2835243)
 - [CYD Desk Buddy by annaglyph](https://makerworld.com/en/models/2787810) 
 
 ## Features >(°)>
