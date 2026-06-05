@@ -13,10 +13,8 @@
 #include <time.h>
 
 #include "arial8pt7b.h"
-#include "arial9pt7b.h"
-#include "arial10pt7b.h"
-#include "arial11pt7b.h"
-#include "arial12pt7b.h"
+#include "arialbd8pt7b.h"
+#include "ariblk8pt7b.h"
 
 
 
@@ -3746,7 +3744,7 @@ void updateFish(float dt) {
       f.vx += (dx / d) * 0.95f * dt;
       f.vy += (dy / d) * 0.95f * dt;
       if (d < 8.0f) {
-        if (f.size < 4) 
+        if (f.size < 2) 
           f.size ++;
         flakes[fi].active = false;  // "eat"
         }
@@ -3795,7 +3793,7 @@ void updateFish(float dt) {
     }
     if (f.x < -wrapPad) {
       f.x = SCREEN_W + wrapPad;
-      f.size = 0; // reset the fish size
+      //f.size = 0; // reset the fish size, only reset it on one side to allow fish to grow more
       refreshFishDepth(f);
     }
     f.y = clampVal(f.y, 14.0f, (float)SEA_LEVEL_Y - 6.0f);
@@ -4097,45 +4095,9 @@ void drawBubbles(TFT_eSprite& s) {
 }
 
 
-/*
-void drawFish(TFT_eSprite& s) {
-  //s.setTextSize(1);
-    s.setFreeFont(&arial12pt7b); 
-  s.setTextDatum(TL_DATUM);
-  const float t = aquariumTimeSec();
-  const float waveBase = t * FISH_SWIM_WAVE_SPEED;
-  static const float waveStepSin = sinf(FISH_SWIM_WAVE_SPACING);
-  static const float waveStepCos = cosf(FISH_SWIM_WAVE_SPACING);
-  int fishCount = activeFishLimit();
-  for (int i = 0; i < fishCount; i++) {
-    Fish& f = fishPool[i];
-    if (!f.active) continue;
-    const char* txt = fishGlyphDrawing(f);
-    const int16_t* glyphOffsets = fishGlyphOffsets(f);
-    uint8_t len = fishGlyphLength(f);
-    float waveAngle = waveBase + f.phase;
-    float wave = sinf(waveAngle);
-    float waveCos = cosf(waveAngle);
-    s.setTextColor(f.renderColor);
-    for (uint8_t c = 0; c < len; ++c) {
-      if (txt[c] != ' ') {
-        float yOffset = wave * FISH_SWIM_WAVE_AMPLITUDE;
-        int charX = (int)f.x + glyphOffsets[c];
-        int charY = (int)f.y + (int)(yOffset + ((yOffset >= 0.0f) ? 0.5f : -0.5f));
-        s.drawChar((uint16_t)txt[c], charX, charY);
-      }
 
-      float nextWave = wave * waveStepCos + waveCos * waveStepSin;
-      waveCos = waveCos * waveStepCos - wave * waveStepSin;
-      wave = nextWave;
-    }
-  }
-}
-*/
 void drawFish(TFT_eSprite& s) {
-  // s.setTextSize(1);
 
-  s.setFreeFont(&arial12pt7b); 
   s.setTextDatum(TL_DATUM);
   const float t = aquariumTimeSec();
   const float waveBase = t * FISH_SWIM_WAVE_SPEED;
@@ -4150,19 +4112,13 @@ void drawFish(TFT_eSprite& s) {
         s.setFreeFont(&arial8pt7b);
         break;
       case 1:
-        s.setFreeFont(&arial9pt7b);
+        s.setFreeFont(&arialbd8pt7b);
         break;
       case 2:
-        s.setFreeFont(&arial10pt7b);
-        break;
-      case 3:
-        s.setFreeFont(&arial11pt7b);
-        break;
-      case 4:
-        s.setFreeFont(&arial12pt7b);
+        s.setFreeFont(&ariblk8pt7b);
         break;
       default:
-        s.setFreeFont(&arial8pt7b);
+        s.setFreeFont(&ariblk8pt7b);
         break;
     }
     if (!f.active) continue;
