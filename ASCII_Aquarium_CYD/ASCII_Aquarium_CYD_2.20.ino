@@ -12,6 +12,14 @@
 #include <XPT2046_Touchscreen.h>
 #include <time.h>
 
+#include "arial8pt7b.h"
+#include "arial9pt7b.h"
+#include "arial10pt7b.h"
+#include "arial11pt7b.h"
+#include "arial12pt7b.h"
+
+
+
 /*
   Desktop ASCII Aquarium for ESP32-2432S028R (CYD)
   Display: ILI9341 320x240 with TFT_eSPI
@@ -585,6 +593,7 @@ struct FishSpecies {
 struct Fish {
   bool active;
   int type;
+  int size;
   float x, y;
   float vx, vy;
   float speed;
@@ -1093,7 +1102,7 @@ FishSpecies fishSpecies[] = {
     {/* Golden Emperor */ "><((( '>", RGB565(255, 184, 0)},                   // Amber
     {/* Purple Jellyfish */ "~~{o}", TFT_VIOLET},                              // Violet
     {/* Red Snapper */ "><(((o>", TFT_RED},                                   // Red
-    {/* Orange Wrasse */ "><((((>`", TFT_ORANGE},
+    {/* Orange Wrasse */ "><((((>'", TFT_ORANGE},
     {/* Teal Glider */ "><((( '>", RGB565(0, 180, 170)},
     {/* Royal Indigo */ "}>{{{{* >", RGB565(75, 0, 156)},                    // Indigo
     {/* Lilac Starfish */ "><((( *>", RGB565(200, 120, 255)},
@@ -3417,6 +3426,7 @@ void refreshFishDepth(Fish& f) {
 
 void activateFish(Fish& f, bool activeNow) {
   f.active = activeNow;
+  f.size = 0;
   if (!activeNow) return;
   f.type = random(0, GLYPH_COUNT);
   int rightWidth = fishGlyphWidthRight[f.type];
@@ -3735,7 +3745,11 @@ void updateFish(float dt) {
       float d = sqrtf(dx * dx + dy * dy) + 0.0001f;
       f.vx += (dx / d) * 0.95f * dt;
       f.vy += (dy / d) * 0.95f * dt;
-      if (d < 8.0f) flakes[fi].active = false;  // "eat"
+      if (d < 8.0f) {
+        if (f.size < 4) 
+          f.size ++;
+        flakes[fi].active = false;  // "eat"
+        }
     }
 
     if (fishAvoidanceEnabled()) {
@@ -3776,10 +3790,12 @@ void updateFish(float dt) {
     float wrapPad = (float)w + 10.0f;
     if (f.x > SCREEN_W + wrapPad) {
       f.x = -wrapPad;
+      f.size = 0; // reset the fish size
       refreshFishDepth(f);
     }
     if (f.x < -wrapPad) {
       f.x = SCREEN_W + wrapPad;
+      f.size = 0; // reset the fish size
       refreshFishDepth(f);
     }
     f.y = clampVal(f.y, 14.0f, (float)SEA_LEVEL_Y - 6.0f);
@@ -4080,8 +4096,11 @@ void drawBubbles(TFT_eSprite& s) {
   }
 }
 
+
+/*
 void drawFish(TFT_eSprite& s) {
-  s.setTextSize(1);
+  //s.setTextSize(1);
+    s.setFreeFont(&arial12pt7b); 
   s.setTextDatum(TL_DATUM);
   const float t = aquariumTimeSec();
   const float waveBase = t * FISH_SWIM_WAVE_SPEED;
@@ -4112,6 +4131,87 @@ void drawFish(TFT_eSprite& s) {
     }
   }
 }
+*/
+void drawFish(TFT_eSprite& s) {
+  // s.setTextSize(1);
+
+  s.setFreeFont(&arial12pt7b); 
+  s.setTextDatum(TL_DATUM);
+  const float t = aquariumTimeSec();
+  const float waveBase = t * FISH_SWIM_WAVE_SPEED;
+  static const float waveStepSin = sinf(FISH_SWIM_WAVE_SPACING);
+  static const float waveStepCos = cosf(FISH_SWIM_WAVE_SPACING);
+  int fishCount = activeFishLimit();
+
+  for (int i = 0; i < fishCount; i++) {
+    Fish& f = fishPool[i];
+    switch (f.size) {
+      case 0:
+        s.setFreeFont(&arial8pt7b);
+        break;
+      case 1:
+        s.setFreeFont(&arial9pt7b);
+        break;
+      case 2:
+        s.setFreeFont(&arial10pt7b);
+        break;
+      case 3:
+        s.setFreeFont(&arial11pt7b);
+        break;
+      case 4:
+        s.setFreeFont(&arial12pt7b);
+        break;
+      default:
+        s.setFreeFont(&arial8pt7b);
+        break;
+    }
+    if (!f.active) continue;
+    const char* txt = fishGlyphDrawing(f);
+    uint8_t len = fishGlyphLength(f);
+
+    float waveAngle = waveBase + f.phase;
+    float wave = sinf(waveAngle);
+    float waveCos = cosf(waveAngle);
+    s.setTextColor(f.renderColor);
+
+    // Track the horizontal position dynamically for this specific fish
+    int currentXOffset = 0; 
+    
+    // ADJUST THIS: Manual pixel spacing padding between letters if they still look too tight
+    int extraLetterSpacing = 2; 
+
+    for (uint8_t c = 0; c < len; ++c) {
+      char currentGlyph = txt[c];
+
+      if (currentGlyph != ' ') {
+        float yOffset = wave * FISH_SWIM_WAVE_AMPLITUDE;
+        
+        // Dynamic horizontal layout tracking instead of the old fixed array
+        int charX = (int)f.x + currentXOffset;
+        
+        // Added baseline compensation (+15) to keep font from floating too high
+        int charY = (int)f.y + 15 + (int)(yOffset + ((yOffset >= 0.0f) ? 0.5f : -0.5f));
+        
+        s.drawChar((uint16_t)currentGlyph, charX, charY);
+      }
+
+      // Convert the character to a tiny string so s.textWidth can read it properly
+      char tempStr[2] = { currentGlyph, '\0' };
+      int measuredWidth = s.textWidth(tempStr);
+
+      // Add the true pixel width to move the cursor forward for the next letter
+      currentXOffset += measuredWidth + extraLetterSpacing;
+
+      float nextWave = wave * waveStepCos + waveCos * waveStepSin;
+      waveCos = waveCos * waveStepCos - wave * waveStepSin;
+      wave = nextWave;
+    }
+  }
+  s.setFreeFont(NULL); 
+  s.setTextFont(2);
+}
+
+
 
 uint16_t octopusColor(float tSec) {
   int r = 205 + (int)(42.0f * sinf(tSec * 0.18f + octopus.colorPhase));
